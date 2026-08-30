@@ -1,0 +1,24 @@
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="panel" x1="22" y1="18" x2="138" y2="146" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#1E293B"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="46" y1="36" x2="114" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E2E8F0"/>
+      <stop offset="0.45" stop-color="#A5F3FC"/>
+      <stop offset="1" stop-color="#5EEAD4"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="89" y1="30" x2="122" y2="63" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8"/>
+      <stop offset="1" stop-color="#22C55E"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="12" y="12" width="136" height="136" rx="36" fill="url(#panel)"/>
+  <path d="M52 46C52 40.4772 56.4772 36 62 36H72C77.5228 36 82 40.4772 82 46V68H98V46C98 40.4772 102.477 36 108 36H118C123.523 36 128 40.4772 128 46V114C128 119.523 123.523 124 118 124H108C102.477 124 98 119.523 98 114V90H82V114C82 119.523 77.5228 124 72 124H62C56.4772 124 52 119.523 52 114V46Z" fill="url(#mark)"/>
+  <path d="M46 82H132" stroke="#99F6E4" stroke-opacity="0.9" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="108" cy="44" r="12" fill="url(#accent)"/>
+  <path d="M108 54V66" stroke="#E0F2FE" stroke-width="4" stroke-linecap="round"/>
+  <path d="M103 60H113" stroke="#E0F2FE" stroke-width="4" stroke-linecap="round"/>
+</svg>
