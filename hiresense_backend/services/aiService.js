@@ -1065,3 +1065,76 @@ function parseAndValidateInterviewQuestions(
       )
   };
 }
+
+export async function generateJobMatch(
+  candidateProfile,
+  job
+) {
+  const prompt = `
+You are an AI recruitment matching system.
+
+Compare the candidate profile with the job.
+
+You must evaluate:
+- Candidate skills against job required skills
+- Candidate experience years
+- Job experience level
+- Relevance of education
+- Relevance of work history
+
+Do not fabricate information.
+
+Candidate Profile:
+${JSON.stringify({
+  name: candidateProfile.name,
+  skills: candidateProfile.skills,
+  experienceYears:
+    candidateProfile.experienceYears,
+  education: candidateProfile.education,
+  workHistory: candidateProfile.workHistory
+})}
+
+Job:
+${JSON.stringify({
+  title: job.title,
+  description: job.description,
+  skills: job.skills,
+  experienceLevel: job.experienceLevel,
+  employmentType: job.employmentType,
+  location: job.location
+})}
+
+Return ONLY valid JSON.
+
+Use exactly this structure:
+
+{
+  "matchScore": 0,
+  "reasoning": "",
+  "strengths": [],
+  "gaps": [],
+  "interviewQuestions": []
+}
+
+Rules:
+
+- matchScore must be an integer between 0 and 100
+- reasoning must explain the score based only on provided data
+- strengths must contain relevant matching qualifications
+- gaps must contain missing or weak qualifications
+- interviewQuestions must contain exactly 5 questions
+- Questions must be specific to the job and candidate profile
+- Never invent skills, experience, education, or achievements
+- Return JSON only
+`;
+
+  const response =
+    await generateGeminiResponse(prompt);
+
+  const parsedResult =
+    parseAIJson(response);
+
+  validateJobMatchResult(parsedResult);
+
+  return parsedResult;
+}

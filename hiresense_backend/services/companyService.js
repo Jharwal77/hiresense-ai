@@ -72,28 +72,43 @@ export async function updateEmployerCompany(
     throw error;
   }
 
-  const name =
-    updates.name ?? existingCompany.name;
+  const allowedFields = [
+    "name",
+    "description",
+    "website",
+    "location"
+  ];
 
-  const description =
-    updates.description ??
-    existingCompany.description;
+  const companyUpdates = {};
 
-  const website =
-    updates.website ??
-    existingCompany.website;
+  for (const field of allowedFields) {
+    if (
+      Object.prototype.hasOwnProperty.call(
+        updates,
+        field
+      )
+    ) {
+      companyUpdates[field] =
+        updates[field];
+    }
+  }
 
-  const location =
-    updates.location ??
-    existingCompany.location;
+  if (
+    Object.keys(companyUpdates).length === 0
+  ) {
+    const error = new Error(
+      "No valid company fields provided"
+    );
+
+    error.statusCode = 400;
+    error.errorCode =
+      "NO_VALID_COMPANY_UPDATES";
+
+    throw error;
+  }
 
   return updateCompanyByEmployerId(
     employerId,
-    {
-      name,
-      description,
-      website,
-      location
-    }
+    companyUpdates
   );
 }

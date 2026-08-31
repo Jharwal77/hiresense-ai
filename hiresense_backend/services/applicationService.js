@@ -18,10 +18,10 @@ export async function applyForJob({
         `
         SELECT
           id,
-          company_id,
           employer_id,
           title,
-          status
+          status,
+          is_external
         FROM jobs
         WHERE id = ?
         LIMIT 1
@@ -51,6 +51,19 @@ export async function applyForJob({
       error.statusCode = 400;
       error.errorCode =
         "JOB_NOT_OPEN";
+
+      throw error;
+    }
+
+    if (Boolean(job.is_external)) {
+      const error =
+        new Error(
+          "External jobs must be applied for on the original job website"
+        );
+
+      error.statusCode = 400;
+      error.errorCode =
+        "EXTERNAL_JOB_APPLICATION";
 
       throw error;
     }
@@ -97,9 +110,7 @@ export async function applyForJob({
     const [existingApplications] =
       await connection.query(
         `
-        SELECT
-          id,
-          status
+        SELECT id
         FROM applications
         WHERE job_id = ?
           AND candidate_id = ?
@@ -152,7 +163,7 @@ export async function applyForJob({
           job_id,
           candidate_id,
           status,
-          created_at,
+          applied_at,
           updated_at
         FROM applications
         WHERE id = ?
@@ -161,7 +172,9 @@ export async function applyForJob({
         [result.insertId]
       );
 
-    return applications[0];
+    return formatApplication(
+      applications[0]
+    );
   } catch (error) {
     await connection.rollback();
 
@@ -197,35 +210,34 @@ export async function getCandidateApplications(
         a.job_id,
         a.candidate_id,
         a.status,
-        a.created_at,
+        a.applied_at,
         a.updated_at,
 
         j.title,
         j.description,
-        j.required_skills,
-        j.experience_min,
-        j.experience_max,
-        j.role_level,
+        j.skills,
         j.location,
         j.employment_type,
-        j.salary_min,
-        j.salary_max,
+        j.experience_level,
+        j.status AS job_status,
+        j.source,
+        j.external_url,
+        j.is_external,
 
         c.id AS company_id,
-        c.name AS company_name,
-        c.location AS company_location
+        c.name AS company_name
 
       FROM applications a
 
       INNER JOIN jobs j
         ON j.id = a.job_id
 
-      INNER JOIN companies c
+      LEFT JOIN companies c
         ON c.id = j.company_id
 
       WHERE a.candidate_id = ?
 
-      ORDER BY a.created_at DESC
+      ORDER BY a.applied_at DESC
       `,
       [candidateId]
     );
@@ -244,8 +256,8 @@ export async function getCandidateApplications(
       status:
         application.status,
 
-      createdAt:
-        application.created_at,
+      appliedAt:
+        application.applied_at,
 
       updatedAt:
         application.updated_at,
@@ -260,19 +272,10 @@ export async function getCandidateApplications(
         description:
           application.description,
 
-        requiredSkills:
+        skills:
           parseJsonArray(
-            application.required_skills
+            application.skills
           ),
-
-        experienceMin:
-          application.experience_min,
-
-        experienceMax:
-          application.experience_max,
-
-        roleLevel:
-          application.role_level,
 
         location:
           application.location,
@@ -280,23 +283,33 @@ export async function getCandidateApplications(
         employmentType:
           application.employment_type,
 
-        salaryMin:
-          application.salary_min,
+        experienceLevel:
+          application.experience_level,
 
-        salaryMax:
-          application.salary_max
+        status:
+          application.job_status,
+
+        source:
+          application.source,
+
+        externalUrl:
+          application.external_url,
+
+        isExternal:
+          Boolean(
+            application.is_external
+          )
       },
 
-      company: {
-        id:
-          application.company_id,
+      company: application.company_id
+        ? {
+            id:
+              application.company_id,
 
-        name:
-          application.company_name,
-
-        location:
-          application.company_location
-      }
+            name:
+              application.company_name
+          }
+        : null
     })
   );
 }
@@ -310,10 +323,10 @@ export async function getJobApplications({
       `
       SELECT
         id,
-        company_id,
         employer_id,
         title,
         status,
+        experience_level,
         experience_min,
         experience_max
       FROM jobs
@@ -360,7 +373,7 @@ export async function getJobApplications({
         a.job_id,
         a.candidate_id,
         a.status,
-        a.created_at,
+        a.applied_at,
         a.updated_at,
 
         u.name AS candidate_name,
@@ -373,7 +386,7 @@ export async function getJobApplications({
 
       WHERE a.job_id = ?
 
-      ORDER BY a.created_at DESC
+      ORDER BY a.applied_at DESC
       `,
       [jobId]
     );
@@ -447,6 +460,52 @@ export async function getJobApplications({
             candidateId
           );
 
+        const formattedResume =
+          resume
+            ? {
+                id:
+                  resume._id,
+
+                name:
+                  resume.name,
+
+                skills:
+                  Array.isArray(
+                    resume.skills
+                  )
+                    ? resume.skills
+                    : [],
+
+                experienceYears:
+                  Number(
+                    resume.experienceYears ?? 0
+                  ),
+
+                education:
+                  Array.isArray(
+                    resume.education
+                  )
+                    ? resume.education
+                    : [],
+
+                workHistory:
+                  Array.isArray(
+                    resume.workHistory
+                  )
+                    ? resume.workHistory
+                    : [],
+
+                aiStatus:
+                  resume.aiStatus,
+
+                aiError:
+                  resume.aiError,
+
+                sourceDocument:
+                  resume.sourceDocument
+              }
+            : null;
+
         return {
           id:
             application.id,
@@ -459,11 +518,14 @@ export async function getJobApplications({
           status:
             application.status,
 
-          createdAt:
-            application.created_at,
+          appliedAt:
+            application.applied_at,
 
           updatedAt:
             application.updated_at,
+
+          resume:
+            formattedResume,
 
           candidate: {
             id:
@@ -475,35 +537,8 @@ export async function getJobApplications({
             email:
               application.candidate_email,
 
-            resume: resume
-              ? {
-                  id: resume._id,
-
-                  name:
-                    resume.name,
-
-                  skills:
-                    resume.skills,
-
-                  experienceYears:
-                    resume.experienceYears,
-
-                  education:
-                    resume.education,
-
-                  workHistory:
-                    resume.workHistory,
-
-                  aiStatus:
-                    resume.aiStatus,
-
-                  aiError:
-                    resume.aiError,
-
-                  sourceDocument:
-                    resume.sourceDocument
-                }
-              : null
+            resume:
+              formattedResume
           },
 
           job: {
@@ -521,7 +556,10 @@ export async function getJobApplications({
             experienceMax:
               Number(
                 job.experience_max ?? 0
-              )
+              ),
+
+            experienceLevel:
+              job.experience_level
           },
 
           match: match
@@ -538,10 +576,18 @@ export async function getJobApplications({
                   match.reasoning,
 
                 strengths:
-                  match.strengths,
+                  Array.isArray(
+                    match.strengths
+                  )
+                    ? match.strengths
+                    : [],
 
                 gaps:
-                  match.gaps
+                  Array.isArray(
+                    match.gaps
+                  )
+                    ? match.gaps
+                    : []
               }
             : null
         };
@@ -549,9 +595,7 @@ export async function getJobApplications({
     );
 
   const ranked =
-    rankCandidates(
-      candidates
-    );
+    rankCandidates(candidates);
 
   return {
     job: {
@@ -580,8 +624,8 @@ export async function getJobApplications({
           status:
             application.status,
 
-          createdAt:
-            application.createdAt,
+          appliedAt:
+            application.appliedAt,
 
           updatedAt:
             application.updatedAt,
@@ -607,6 +651,28 @@ export async function updateApplicationStatus({
   employerId,
   status
 }) {
+  const allowedStatuses = [
+    "applied",
+    "shortlisted",
+    "rejected",
+    "hired"
+  ];
+
+  if (
+    !allowedStatuses.includes(status)
+  ) {
+    const error =
+      new Error(
+        "Invalid application status"
+      );
+
+    error.statusCode = 400;
+    error.errorCode =
+      "INVALID_APPLICATION_STATUS";
+
+    throw error;
+  }
+
   const connection =
     await pool.getConnection();
 
@@ -674,11 +740,9 @@ export async function updateApplicationStatus({
     await connection.query(
       `
       UPDATE applications
-
       SET
         status = ?,
         updated_at = CURRENT_TIMESTAMP
-
       WHERE id = ?
       `,
       [
@@ -698,19 +762,18 @@ export async function updateApplicationStatus({
         job_id,
         candidate_id,
         status,
-        created_at,
+        applied_at,
         updated_at
-
       FROM applications
-
       WHERE id = ?
-
       LIMIT 1
       `,
       [applicationId]
     );
 
-    return updatedApplications[0];
+    return formatApplication(
+      updatedApplications[0]
+    );
   } catch (error) {
     await connection.rollback();
 
@@ -718,6 +781,30 @@ export async function updateApplicationStatus({
   } finally {
     connection.release();
   }
+}
+
+function formatApplication(
+  application
+) {
+  return {
+    id:
+      application.id,
+
+    jobId:
+      application.job_id,
+
+    candidateId:
+      application.candidate_id,
+
+    status:
+      application.status,
+
+    appliedAt:
+      application.applied_at,
+
+    updatedAt:
+      application.updated_at
+  };
 }
 
 function parseJsonArray(value) {

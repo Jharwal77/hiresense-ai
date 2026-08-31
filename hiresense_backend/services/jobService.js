@@ -4,8 +4,7 @@ import {
   findJobs,
   findJobsByEmployerId,
   updateJobById,
-  deleteJobById,
-  closeJobById
+  deleteJobById
 } from "../models/mysql/jobModel.js";
 
 import {
@@ -16,14 +15,12 @@ export async function createEmployerJob({
   employerId,
   title,
   description,
-  requiredSkills,
-  experienceMin,
-  experienceMax,
-  roleLevel,
   location,
   employmentType,
-  salaryMin,
-  salaryMax
+  experienceLevel,
+  roleLevel,
+  skills,
+  requiredSkills
 }) {
   const company =
     await findCompanyByEmployerId(employerId);
@@ -34,7 +31,8 @@ export async function createEmployerJob({
     );
 
     error.statusCode = 400;
-    error.errorCode = "COMPANY_PROFILE_REQUIRED";
+    error.errorCode =
+      "COMPANY_PROFILE_REQUIRED";
 
     throw error;
   }
@@ -44,19 +42,18 @@ export async function createEmployerJob({
     employerId,
     title,
     description,
-    requiredSkills,
-    experienceMin,
-    experienceMax,
-    roleLevel,
     location,
     employmentType,
-    salaryMin,
-    salaryMax
+    experienceLevel:
+      experienceLevel ?? roleLevel ?? null,
+    skills:
+      skills ?? requiredSkills ?? []
   });
 }
 
 export async function getJob(id) {
-  const job = await findJobById(id);
+  const job =
+    await findJobById(id);
 
   if (!job) {
     const error = new Error(
@@ -64,7 +61,8 @@ export async function getJob(id) {
     );
 
     error.statusCode = 404;
-    error.errorCode = "JOB_NOT_FOUND";
+    error.errorCode =
+      "JOB_NOT_FOUND";
 
     throw error;
   }
@@ -72,12 +70,16 @@ export async function getJob(id) {
   return job;
 }
 
-export async function getPublicJobs(filters = {}) {
+export async function getPublicJobs(
+  filters = {}
+) {
   return findJobs({
     search: filters.search,
     location: filters.location,
-    roleLevel: filters.roleLevel,
-    employmentType: filters.employmentType,
+    employmentType:
+      filters.employmentType,
+    experienceLevel:
+      filters.experienceLevel,
     status: "open"
   });
 }
@@ -104,7 +106,8 @@ export async function updateEmployerJob(
     );
 
     error.statusCode = 404;
-    error.errorCode = "JOB_NOT_FOUND";
+    error.errorCode =
+      "JOB_NOT_FOUND";
 
     throw error;
   }
@@ -117,81 +120,47 @@ export async function updateEmployerJob(
     );
 
     error.statusCode = 403;
-    error.errorCode = "JOB_ACCESS_FORBIDDEN";
+    error.errorCode =
+      "JOB_ACCESS_FORBIDDEN";
 
     throw error;
   }
 
-  if (existingJob.status === "closed") {
-    const error = new Error(
-      "Closed jobs cannot be edited"
-    );
+  return updateJobById(
+    jobId,
+    employerId,
+    {
+      title:
+        updates.title ??
+        existingJob.title,
 
-    error.statusCode = 400;
-    error.errorCode = "JOB_ALREADY_CLOSED";
+      description:
+        updates.description ??
+        existingJob.description,
 
-    throw error;
-  }
+      location:
+        updates.location ??
+        existingJob.location,
 
-  const updatedJob =
-    await updateJobById(
-      jobId,
-      employerId,
-      {
-        title:
-          updates.title ??
-          existingJob.title,
+      employmentType:
+        updates.employmentType ??
+        existingJob.employmentType,
 
-        description:
-          updates.description ??
-          existingJob.description,
+      experienceLevel:
+        updates.experienceLevel ??
+        updates.roleLevel ??
+        existingJob.experienceLevel,
 
-        requiredSkills:
-          updates.requiredSkills ??
-          existingJob.requiredSkills,
+      skills:
+        updates.skills ??
+        updates.requiredSkills ??
+        existingJob.skills,
 
-        experienceMin:
-          updates.experienceMin ??
-          existingJob.experienceMin,
-
-        experienceMax:
-          updates.experienceMax ??
-          existingJob.experienceMax,
-
-        roleLevel:
-          updates.roleLevel ??
-          existingJob.roleLevel,
-
-        location:
-          updates.location ??
-          existingJob.location,
-
-        employmentType:
-          updates.employmentType ??
-          existingJob.employmentType,
-
-        salaryMin:
-          updates.salaryMin ??
-          existingJob.salaryMin,
-
-        salaryMax:
-          updates.salaryMax ??
-          existingJob.salaryMax
-      }
-    );
-
-  if (!updatedJob) {
-    const error = new Error(
-      "Unable to update job"
-    );
-
-    error.statusCode = 400;
-    error.errorCode = "JOB_UPDATE_FAILED";
-
-    throw error;
-  }
-
-  return updatedJob;
+      status:
+        updates.status ??
+        existingJob.status
+    }
+  );
 }
 
 export async function deleteEmployerJob(
@@ -207,7 +176,8 @@ export async function deleteEmployerJob(
     );
 
     error.statusCode = 404;
-    error.errorCode = "JOB_NOT_FOUND";
+    error.errorCode =
+      "JOB_NOT_FOUND";
 
     throw error;
   }
@@ -220,7 +190,8 @@ export async function deleteEmployerJob(
     );
 
     error.statusCode = 403;
-    error.errorCode = "JOB_ACCESS_FORBIDDEN";
+    error.errorCode =
+      "JOB_ACCESS_FORBIDDEN";
 
     throw error;
   }
@@ -237,7 +208,8 @@ export async function deleteEmployerJob(
     );
 
     error.statusCode = 400;
-    error.errorCode = "JOB_DELETE_FAILED";
+    error.errorCode =
+      "JOB_DELETE_FAILED";
 
     throw error;
   }
@@ -258,7 +230,8 @@ export async function closeEmployerJob(
     );
 
     error.statusCode = 404;
-    error.errorCode = "JOB_NOT_FOUND";
+    error.errorCode =
+      "JOB_NOT_FOUND";
 
     throw error;
   }
@@ -271,38 +244,49 @@ export async function closeEmployerJob(
     );
 
     error.statusCode = 403;
-    error.errorCode = "JOB_ACCESS_FORBIDDEN";
+    error.errorCode =
+      "JOB_ACCESS_FORBIDDEN";
 
     throw error;
   }
 
-  if (existingJob.status === "closed") {
+  if (
+    existingJob.status === "closed"
+  ) {
     const error = new Error(
       "Job is already closed"
     );
 
     error.statusCode = 400;
-    error.errorCode = "JOB_ALREADY_CLOSED";
+    error.errorCode =
+      "JOB_ALREADY_CLOSED";
 
     throw error;
   }
 
-  const closed =
-    await closeJobById(
-      jobId,
-      employerId
-    );
+  return updateJobById(
+    jobId,
+    employerId,
+    {
+      title:
+        existingJob.title,
 
-  if (!closed) {
-    const error = new Error(
-      "Unable to close job"
-    );
+      description:
+        existingJob.description,
 
-    error.statusCode = 400;
-    error.errorCode = "JOB_CLOSE_FAILED";
+      location:
+        existingJob.location,
 
-    throw error;
-  }
+      employmentType:
+        existingJob.employmentType,
 
-  return findJobById(jobId);
+      experienceLevel:
+        existingJob.experienceLevel,
+
+      skills:
+        existingJob.skills,
+
+      status: "closed"
+    }
+  );
 }

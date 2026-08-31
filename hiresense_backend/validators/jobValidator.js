@@ -15,12 +15,6 @@ const allowedEmploymentTypes = [
 ];
 
 export function validateCreateJob(req, res, next) {
-  console.log("========== JOB REQUEST ==========");
-  console.log("METHOD:", req.method);
-  console.log("URL:", req.originalUrl);
-  console.log("CONTENT TYPE:", req.headers["content-type"]);
-  console.log("BODY:", req.body);
-  console.log("=================================");
 
   const errors = validateJobBody(
     req.body || {},

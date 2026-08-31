@@ -1,7 +1,6 @@
 import {
   createEmployerJob,
   getJob,
-  getPublicJobs,
   getEmployerJobs,
   updateEmployerJob,
   deleteEmployerJob,
@@ -26,13 +25,9 @@ export async function getJobs(req, res, next) {
     const {
       search,
       location,
-      roleLevel,
+      experienceLevel,
       employmentType,
-      source,
-      minSalary,
-      maxSalary,
-      minExperience,
-      maxExperience
+      source
     } = req.query;
 
     const page = Math.max(
@@ -53,10 +48,7 @@ export async function getJobs(req, res, next) {
         ? source.trim().toLowerCase()
         : "";
 
-    if (
-      normalizedSource === "" ||
-      normalizedSource === "adzuna"
-    ) {
+    if (normalizedSource === "adzuna") {
       try {
         await aggregateAdzunaJobs({
           country: "in",
@@ -76,14 +68,10 @@ export async function getJobs(req, res, next) {
     const jobs = await findJobs({
       search,
       location,
-      roleLevel,
       employmentType,
+      experienceLevel,
       source:
         normalizedSource || undefined,
-      minSalary,
-      maxSalary,
-      minExperience,
-      maxExperience,
       status: "open"
     });
 
@@ -127,19 +115,20 @@ export async function createJob(req, res, next) {
   try {
     const body = req.body || {};
 
-    const job = await createEmployerJob({
-      employerId: req.user.userId,
-      title: body.title,
-      description: body.description,
-      requiredSkills: body.requiredSkills,
-      experienceMin: body.experienceMin,
-      experienceMax: body.experienceMax,
-      roleLevel: body.roleLevel,
-      location: body.location,
-      employmentType: body.employmentType,
-      salaryMin: body.salaryMin,
-      salaryMax: body.salaryMax
-    });
+    const job =
+      await createEmployerJob({
+        employerId: req.user.userId,
+        title: body.title,
+        description: body.description,
+        requiredSkills: body.requiredSkills,
+        experienceMin: body.experienceMin,
+        experienceMax: body.experienceMax,
+        roleLevel: body.roleLevel,
+        location: body.location,
+        employmentType: body.employmentType,
+        salaryMin: body.salaryMin,
+        salaryMax: body.salaryMax
+      });
 
     return res.status(201).json({
       success: true,
@@ -153,46 +142,11 @@ export async function createJob(req, res, next) {
   }
 }
 
-export async function listJobs(req, res, next) {
-  try {
-    const {
-      search,
-      location,
-      roleLevel,
-      employmentType,
-      source,
-      minSalary,
-      maxSalary,
-      minExperience,
-      maxExperience
-    } = req.query;
-
-    const jobs = await findJobs({
-      search,
-      location,
-      roleLevel,
-      employmentType,
-      source,
-      minSalary,
-      maxSalary,
-      minExperience,
-      maxExperience,
-      status: "open"
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Jobs retrieved successfully",
-      data: {
-        jobs
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function getJobById(req, res, next) {
+export async function getJobById(
+  req,
+  res,
+  next
+) {
   try {
     const jobId =
       Number(req.params.id);
@@ -221,7 +175,8 @@ export async function getJobById(req, res, next) {
 
     return res.status(200).json({
       success: true,
-      message: "Job retrieved successfully",
+      message:
+        "Job retrieved successfully",
       data: {
         job
       }
@@ -231,7 +186,11 @@ export async function getJobById(req, res, next) {
   }
 }
 
-export async function listMyJobs(req, res, next) {
+export async function listMyJobs(
+  req,
+  res,
+  next
+) {
   try {
     const jobs =
       await getEmployerJobs(
@@ -251,7 +210,11 @@ export async function listMyJobs(req, res, next) {
   }
 }
 
-export async function updateJob(req, res, next) {
+export async function updateJob(
+  req,
+  res,
+  next
+) {
   try {
     const jobId =
       Number(req.params.id);
@@ -284,7 +247,8 @@ export async function updateJob(req, res, next) {
 
     return res.status(200).json({
       success: true,
-      message: "Job updated successfully",
+      message:
+        "Job updated successfully",
       data: {
         job
       }
@@ -294,7 +258,11 @@ export async function updateJob(req, res, next) {
   }
 }
 
-export async function deleteJob(req, res, next) {
+export async function deleteJob(
+  req,
+  res,
+  next
+) {
   try {
     const jobId =
       Number(req.params.id);
@@ -326,14 +294,19 @@ export async function deleteJob(req, res, next) {
 
     return res.status(200).json({
       success: true,
-      message: "Job deleted successfully"
+      message:
+        "Job deleted successfully"
     });
   } catch (error) {
     next(error);
   }
 }
 
-export async function closeJob(req, res, next) {
+export async function closeJob(
+  req,
+  res,
+  next
+) {
   try {
     const jobId =
       Number(req.params.id);
@@ -365,7 +338,8 @@ export async function closeJob(req, res, next) {
 
     return res.status(200).json({
       success: true,
-      message: "Job closed successfully",
+      message:
+        "Job closed successfully",
       data: {
         job
       }
@@ -375,7 +349,11 @@ export async function closeJob(req, res, next) {
   }
 }
 
-export async function applyToJob(req, res, next) {
+export async function applyToJob(
+  req,
+  res,
+  next
+) {
   try {
     const jobId =
       Number(req.params.id);

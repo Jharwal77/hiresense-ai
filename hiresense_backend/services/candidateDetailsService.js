@@ -1,7 +1,13 @@
 import { pool } from "../config/mysql.js";
+
 import ResumeProfile from "../models/mongo/resumeProfileModel.js";
 import MatchResult from "../models/mongo/matchResultModel.js";
-import InterviewQuestion from "../models/mongo/interviewQuestionModel.js";
+
+import {
+  calculateExperienceScore,
+  calculateRecencyScore,
+  calculateFinalScore
+} from "./rankingService.js";
 
 export async function getEmployerCandidateDetails({
   candidateId,
@@ -15,7 +21,7 @@ export async function getEmployerCandidateDetails({
         a.job_id,
         a.candidate_id,
         a.status,
-        a.created_at,
+        a.applied_at,
         a.updated_at,
 
         u.name AS candidate_name,
@@ -48,7 +54,7 @@ export async function getEmployerCandidateDetails({
       WHERE a.candidate_id = ?
         AND j.employer_id = ?
 
-      ORDER BY a.created_at DESC
+      ORDER BY a.applied_at DESC
       `,
       [
         candidateId,
@@ -81,27 +87,12 @@ export async function getEmployerCandidateDetails({
       candidateId
     }).lean();
 
-  const interviewQuestions =
-    await InterviewQuestion.find({
-      candidateId
-    }).lean();
-
   const matchesByJob =
     new Map(
       matchResults.map(
         (match) => [
           Number(match.jobId),
           match
-        ]
-      )
-    );
-
-  const questionsByJob =
-    new Map(
-      interviewQuestions.map(
-        (questions) => [
-          Number(questions.jobId),
-          questions
         ]
       )
     );
@@ -128,6 +119,12 @@ export async function getEmployerCandidateDetails({
               resume.education,
             workHistory:
               resume.workHistory,
+            resumeScore:
+              resume.resumeScore,
+            resumeStrengths:
+              resume.resumeStrengths,
+            resumeGaps:
+              resume.resumeGaps,
             aiStatus:
               resume.aiStatus,
             aiError:
@@ -148,12 +145,35 @@ export async function getEmployerCandidateDetails({
               )
             );
 
-          const questions =
-            questionsByJob.get(
-              Number(
-                application.job_id
-              )
+          const experienceScore =
+            calculateExperienceScore({
+              candidateExperienceYears:
+                resume?.experienceYears ?? 0,
+
+              experienceMin:
+                application.experience_min ?? 0,
+
+              experienceMax:
+                application.experience_max ?? 0
+            });
+
+          const recencyScore =
+            calculateRecencyScore({
+              workHistory:
+                resume?.workHistory ?? []
+            });
+
+          const matchScore =
+            Number(
+              match?.matchScore ?? 0
             );
+
+          const finalScore =
+            calculateFinalScore({
+              matchScore,
+              experienceScore,
+              recencyScore
+            });
 
           return {
             id:
@@ -162,8 +182,8 @@ export async function getEmployerCandidateDetails({
             status:
               application.status,
 
-            createdAt:
-              application.created_at,
+            appliedAt:
+              application.applied_at,
 
             updatedAt:
               application.updated_at,
@@ -185,12 +205,12 @@ export async function getEmployerCandidateDetails({
 
               experienceMin:
                 Number(
-                  application.experience_min
+                  application.experience_min ?? 0
                 ),
 
               experienceMax:
                 Number(
-                  application.experience_max
+                  application.experience_max ?? 0
                 ),
 
               roleLevel:
@@ -206,24 +226,54 @@ export async function getEmployerCandidateDetails({
                 application.job_status
             },
 
+            company: {
+              id:
+                application.company_id,
+
+              name:
+                application.company_name
+            },
+
             match: match
               ? {
-                  id: match._id,
+                  id:
+                    match._id,
+
                   matchScore:
                     match.matchScore,
+
                   reasoning:
                     match.reasoning,
+
                   strengths:
-                    match.strengths,
+                    Array.isArray(
+                      match.strengths
+                    )
+                      ? match.strengths
+                      : [],
+
                   gaps:
-                    match.gaps
+                    Array.isArray(
+                      match.gaps
+                    )
+                      ? match.gaps
+                      : []
                 }
               : null,
 
             interviewQuestions:
-              questions
-                ? questions.questions
-                : []
+              Array.isArray(
+                match?.interviewQuestions
+              )
+                ? match.interviewQuestions
+                : [],
+
+            ranking: {
+              matchScore,
+              experienceScore,
+              recencyScore,
+              finalScore
+            }
           };
         }
       )

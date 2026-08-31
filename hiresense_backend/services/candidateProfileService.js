@@ -3,7 +3,7 @@ import ResumeProfile from "../models/mongo/resumeProfileModel.js";
 export async function getCandidateProfile(candidateId) {
   const profile = await ResumeProfile.findOne({
     candidateId
-  });
+  }).lean();
 
   if (!profile) {
     const error = new Error(
@@ -11,7 +11,8 @@ export async function getCandidateProfile(candidateId) {
     );
 
     error.statusCode = 404;
-    error.errorCode = "RESUME_PROFILE_NOT_FOUND";
+    error.errorCode =
+      "RESUME_PROFILE_NOT_FOUND";
 
     throw error;
   }
@@ -19,22 +20,52 @@ export async function getCandidateProfile(candidateId) {
   return profile;
 }
 
+
 export async function updateCandidateProfile(
   candidateId,
   updates
 ) {
-  const allowedUpdates = {
-    name: updates.name,
-    skills: updates.skills,
-    experienceYears:
-      updates.experienceYears,
-    education: updates.education,
-    workHistory: updates.workHistory
-  };
+  const allowedFields = [
+    "name",
+    "skills",
+    "experienceYears",
+    "education",
+    "workHistory"
+  ];
+
+  const allowedUpdates = {};
+
+  for (const field of allowedFields) {
+    if (
+      Object.prototype.hasOwnProperty.call(
+        updates,
+        field
+      )
+    ) {
+      allowedUpdates[field] =
+        updates[field];
+    }
+  }
+
+  if (
+    Object.keys(allowedUpdates).length === 0
+  ) {
+    const error = new Error(
+      "No valid profile fields provided"
+    );
+
+    error.statusCode = 400;
+    error.errorCode =
+      "NO_VALID_PROFILE_UPDATES";
+
+    throw error;
+  }
 
   const profile =
     await ResumeProfile.findOneAndUpdate(
-      { candidateId },
+      {
+        candidateId
+      },
       {
         $set: allowedUpdates
       },
@@ -50,7 +81,8 @@ export async function updateCandidateProfile(
     );
 
     error.statusCode = 404;
-    error.errorCode = "RESUME_PROFILE_NOT_FOUND";
+    error.errorCode =
+      "RESUME_PROFILE_NOT_FOUND";
 
     throw error;
   }

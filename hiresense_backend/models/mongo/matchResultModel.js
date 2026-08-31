@@ -58,9 +58,11 @@ matchResultSchema.index(
   }
 );
 
-const MatchResult = mongoose.model(
-  "MatchResult",
-  matchResultSchema
-);
+const MatchResult =
+  mongoose.models.MatchResult ||
+  mongoose.model(
+    "MatchResult",
+    matchResultSchema
+  );
 
 export default MatchResult;

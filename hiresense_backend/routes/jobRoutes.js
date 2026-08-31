@@ -2,7 +2,7 @@ import express from "express";
 
 import {
   createJob,
-  listJobs,
+  getJobs,
   getJobById,
   listMyJobs,
   updateJob,
@@ -19,6 +19,10 @@ import {
 import {
   requireRole
 } from "../middleware/requireRole.js";
+
+import {
+  validatePositiveInteger
+} from "../middleware/validateId.js";
 
 import {
   validateCreateJob,
@@ -38,8 +42,9 @@ const router = express.Router();
 
 router.get(
   "/",
-  listJobs
+  getJobs
 );
+
 
 router.get(
   "/my",
@@ -49,33 +54,38 @@ router.get(
 );
 
 
-
 router.get(
   "/:id/applications",
+  validatePositiveInteger("id", "Job ID"),
   authenticate,
   requireRole("employer"),
   listJobApplications
 );
 
+
 router.post(
   "/:id/match",
+  validatePositiveInteger("id", "Job ID"),
   authenticate,
   requireRole("candidate"),
   matchJob
 );
 
+
 router.get(
   "/:id/questions",
+  validatePositiveInteger("id", "Job ID"),
   authenticate,
   requireRole("candidate"),
   getInterviewQuestions
 );
 
+
 router.get(
   "/:id",
+  validatePositiveInteger("id", "Job ID"),
   getJobById
 );
-
 
 
 router.post(
@@ -87,18 +97,18 @@ router.post(
 );
 
 
-
 router.post(
   "/:id/apply",
+  validatePositiveInteger("id", "Job ID"),
   authenticate,
   requireRole("candidate"),
   applyToJob
 );
 
 
-
 router.patch(
   "/:id",
+  validatePositiveInteger("id", "Job ID"),
   authenticate,
   requireRole("employer"),
   validateUpdateJob,
@@ -108,6 +118,7 @@ router.patch(
 
 router.patch(
   "/:id/close",
+  validatePositiveInteger("id", "Job ID"),
   authenticate,
   requireRole("employer"),
   closeJob
@@ -116,9 +127,11 @@ router.patch(
 
 router.delete(
   "/:id",
+  validatePositiveInteger("id", "Job ID"),
   authenticate,
   requireRole("employer"),
   deleteJob
 );
+
 
 export default router;

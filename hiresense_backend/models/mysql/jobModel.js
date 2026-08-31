@@ -5,48 +5,37 @@ export async function createJob({
   employerId,
   title,
   description,
-  requiredSkills,
-  experienceMin,
-  experienceMax,
-  roleLevel,
   location,
   employmentType,
-  salaryMin,
-  salaryMax
+  experienceLevel,
+  skills
 }) {
   const [result] = await pool.execute(
     `
-      INSERT INTO jobs (
+      INSERT INTO jobs
+      (
         company_id,
         employer_id,
         title,
         description,
-        required_skills,
-        experience_min,
-        experience_max,
-        role_level,
         location,
         employment_type,
-        salary_min,
-        salary_max,
+        experience_level,
+        skills,
         source,
         is_external
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       companyId,
       employerId,
       title,
       description,
-      JSON.stringify(requiredSkills || []),
-      experienceMin ?? 0,
-      experienceMax ?? null,
-      roleLevel,
       location || null,
-      employmentType,
-      salaryMin ?? null,
-      salaryMax ?? null,
+      employmentType || null,
+      experienceLevel || null,
+      JSON.stringify(skills || []),
       "hiresense",
       false
     ]
@@ -59,28 +48,27 @@ export async function findJobById(id) {
   const [rows] = await pool.execute(
     `
       SELECT
-        id,
-        company_id,
-        employer_id,
-        title,
-        description,
-        required_skills,
-        experience_min,
-        experience_max,
-        role_level,
-        location,
-        employment_type,
-        salary_min,
-        salary_max,
-        status,
-        source,
-        external_job_id,
-        external_url,
-        is_external,
-        created_at,
-        updated_at
-      FROM jobs
-      WHERE id = ?
+        j.id,
+        j.company_id,
+        j.employer_id,
+        j.title,
+        j.description,
+        j.location,
+        j.employment_type,
+        j.experience_level,
+        j.skills,
+        j.status,
+        j.source,
+        j.external_job_id,
+        j.external_url,
+        j.is_external,
+        j.created_at,
+        j.updated_at,
+        c.name AS company_name
+      FROM jobs j
+      LEFT JOIN companies c
+        ON j.company_id = c.id
+      WHERE j.id = ?
       LIMIT 1
     `,
     [id]
@@ -96,167 +84,94 @@ export async function findJobById(id) {
 export async function findJobs({
   search,
   location,
-  roleLevel,
   employmentType,
+  experienceLevel,
   source,
-  minSalary,
-  maxSalary,
-  minExperience,
-  maxExperience,
   status = "open"
 } = {}) {
   let query = `
     SELECT
-      id,
-      company_id,
-      employer_id,
-      title,
-      description,
-      required_skills,
-      experience_min,
-      experience_max,
-      role_level,
-      location,
-      employment_type,
-      salary_min,
-      salary_max,
-      status,
-      source,
-      external_job_id,
-      external_url,
-      is_external,
-      created_at,
-      updated_at
-    FROM jobs
-    WHERE status = ?
+      j.id,
+      j.company_id,
+      j.employer_id,
+      j.title,
+      j.description,
+      j.location,
+      j.employment_type,
+      j.experience_level,
+      j.skills,
+      j.status,
+      j.source,
+      j.external_job_id,
+      j.external_url,
+      j.is_external,
+      j.created_at,
+      j.updated_at,
+      c.name AS company_name
+    FROM jobs j
+    LEFT JOIN companies c
+      ON j.company_id = c.id
+    WHERE j.status = ?
   `;
 
-  const params = [status];
+  const values = [status];
 
   if (search) {
     query += `
       AND (
-        title LIKE ?
-        OR description LIKE ?
+        j.title LIKE ?
+        OR j.description LIKE ?
       )
     `;
 
-    const searchValue = `%${search}%`;
-
-    params.push(
-      searchValue,
-      searchValue
+    values.push(
+      `%${search}%`,
+      `%${search}%`
     );
   }
 
   if (location) {
     query += `
-      AND location LIKE ?
+      AND j.location LIKE ?
     `;
 
-    params.push(
+    values.push(
       `%${location}%`
     );
   }
 
-  if (roleLevel) {
-    query += `
-      AND role_level = ?
-    `;
-
-    params.push(roleLevel);
-  }
-
   if (employmentType) {
     query += `
-      AND employment_type = ?
+      AND j.employment_type = ?
     `;
 
-    params.push(employmentType);
+    values.push(employmentType);
+  }
+
+  if (experienceLevel) {
+    query += `
+      AND j.experience_level = ?
+    `;
+
+    values.push(experienceLevel);
   }
 
   if (source) {
     query += `
-      AND source = ?
+      AND j.source = ?
     `;
 
-    params.push(source);
-  }
-
-  if (
-    minSalary !== undefined &&
-    minSalary !== null &&
-    minSalary !== ""
-  ) {
-    query += `
-      AND (
-        salary_max IS NULL
-        OR salary_max >= ?
-      )
-    `;
-
-    params.push(
-      Number(minSalary)
-    );
-  }
-
-  if (
-    maxSalary !== undefined &&
-    maxSalary !== null &&
-    maxSalary !== ""
-  ) {
-    query += `
-      AND (
-        salary_min IS NULL
-        OR salary_min <= ?
-      )
-    `;
-
-    params.push(
-      Number(maxSalary)
-    );
-  }
-
-  if (
-    minExperience !== undefined &&
-    minExperience !== null &&
-    minExperience !== ""
-  ) {
-    query += `
-      AND (
-        experience_max IS NULL
-        OR experience_max >= ?
-      )
-    `;
-
-    params.push(
-      Number(minExperience)
-    );
-  }
-
-  if (
-    maxExperience !== undefined &&
-    maxExperience !== null &&
-    maxExperience !== ""
-  ) {
-    query += `
-      AND experience_min <= ?
-    `;
-
-    params.push(
-      Number(maxExperience)
-    );
+    values.push(source);
   }
 
   query += `
-    ORDER BY created_at DESC
+    ORDER BY j.created_at DESC
   `;
 
-  const [rows] =
-    await pool.execute(
-      query,
-      params
-    );
+  const [rows] = await pool.execute(
+    query,
+    values
+  );
 
   return rows.map(formatJob);
 }
@@ -267,19 +182,52 @@ export async function findJobsByEmployerId(
   const [rows] = await pool.execute(
     `
       SELECT
+        j.id,
+        j.company_id,
+        j.employer_id,
+        j.title,
+        j.description,
+        j.location,
+        j.employment_type,
+        j.experience_level,
+        j.skills,
+        j.status,
+        j.source,
+        j.external_job_id,
+        j.external_url,
+        j.is_external,
+        j.created_at,
+        j.updated_at,
+        c.name AS company_name
+      FROM jobs j
+      LEFT JOIN companies c
+        ON j.company_id = c.id
+      WHERE j.employer_id = ?
+        AND j.is_external = FALSE
+      ORDER BY j.created_at DESC
+    `,
+    [employerId]
+  );
+
+  return rows.map(formatJob);
+}
+
+export async function findJobByIdAndEmployerId(
+  jobId,
+  employerId
+) {
+  const [rows] = await pool.execute(
+    `
+      SELECT
         id,
         company_id,
         employer_id,
         title,
         description,
-        required_skills,
-        experience_min,
-        experience_max,
-        role_level,
         location,
         employment_type,
-        salary_min,
-        salary_max,
+        experience_level,
+        skills,
         status,
         source,
         external_job_id,
@@ -288,30 +236,35 @@ export async function findJobsByEmployerId(
         created_at,
         updated_at
       FROM jobs
-      WHERE employer_id = ?
+      WHERE id = ?
+        AND employer_id = ?
         AND is_external = FALSE
-      ORDER BY created_at DESC
+      LIMIT 1
     `,
-    [employerId]
+    [
+      jobId,
+      employerId
+    ]
   );
 
-  return rows.map(formatJob);
+  if (!rows[0]) {
+    return null;
+  }
+
+  return formatJob(rows[0]);
 }
 
 export async function updateJobById(
-  id,
+  jobId,
   employerId,
   {
     title,
     description,
-    requiredSkills,
-    experienceMin,
-    experienceMax,
-    roleLevel,
     location,
     employmentType,
-    salaryMin,
-    salaryMax
+    experienceLevel,
+    skills,
+    status
   }
 ) {
   const [result] = await pool.execute(
@@ -320,14 +273,11 @@ export async function updateJobById(
       SET
         title = ?,
         description = ?,
-        required_skills = ?,
-        experience_min = ?,
-        experience_max = ?,
-        role_level = ?,
         location = ?,
         employment_type = ?,
-        salary_min = ?,
-        salary_max = ?
+        experience_level = ?,
+        skills = ?,
+        status = ?
       WHERE id = ?
         AND employer_id = ?
         AND is_external = FALSE
@@ -335,17 +285,12 @@ export async function updateJobById(
     [
       title,
       description,
-      JSON.stringify(
-        requiredSkills || []
-      ),
-      experienceMin ?? 0,
-      experienceMax ?? null,
-      roleLevel,
       location || null,
-      employmentType,
-      salaryMin ?? null,
-      salaryMax ?? null,
-      id,
+      employmentType || null,
+      experienceLevel || null,
+      JSON.stringify(skills || []),
+      status,
+      jobId,
       employerId
     ]
   );
@@ -354,11 +299,11 @@ export async function updateJobById(
     return null;
   }
 
-  return findJobById(id);
+  return findJobById(jobId);
 }
 
 export async function deleteJobById(
-  id,
+  jobId,
   employerId
 ) {
   const [result] = await pool.execute(
@@ -369,7 +314,7 @@ export async function deleteJobById(
         AND is_external = FALSE
     `,
     [
-      id,
+      jobId,
       employerId
     ]
   );
@@ -377,328 +322,152 @@ export async function deleteJobById(
   return result.affectedRows > 0;
 }
 
-export async function closeJobById(
-  id,
-  employerId
-) {
-  const [result] = await pool.execute(
-    `
-      UPDATE jobs
-      SET status = 'closed'
-      WHERE id = ?
-        AND employer_id = ?
-        AND is_external = FALSE
-        AND status = 'open'
-    `,
-    [
-      id,
-      employerId
-    ]
-  );
-
-  return result.affectedRows > 0;
-}
-
-export async function findExternalJob(
+export async function upsertExternalJob({
   source,
-  externalJobId
-) {
-  const [rows] = await pool.execute(
+  externalJobId,
+  title,
+  description,
+  location,
+  employmentType,
+  experienceLevel,
+  skills,
+  externalUrl
+}) {
+  const [existingRows] = await pool.execute(
     `
-      SELECT
-        id,
-        company_id,
-        employer_id,
-        title,
-        description,
-        required_skills,
-        experience_min,
-        experience_max,
-        role_level,
-        location,
-        employment_type,
-        salary_min,
-        salary_max,
-        status,
-        source,
-        external_job_id,
-        external_url,
-        is_external,
-        created_at,
-        updated_at
+      SELECT id
       FROM jobs
       WHERE source = ?
         AND external_job_id = ?
-        AND is_external = TRUE
       LIMIT 1
     `,
     [
       source,
-      String(externalJobId)
+      externalJobId
     ]
   );
 
-  return rows[0] || null;
-}
+  if (existingRows.length > 0) {
+    const existingJobId =
+      existingRows[0].id;
 
-export async function createExternalJob(
-  job
-) {
-  const [result] = await pool.execute(
-    `
-      INSERT INTO jobs (
-        company_id,
-        employer_id,
+    await pool.execute(
+      `
+        UPDATE jobs
+        SET
+          title = ?,
+          description = ?,
+          location = ?,
+          employment_type = ?,
+          experience_level = ?,
+          skills = ?,
+          external_url = ?,
+          status = 'open',
+          is_external = TRUE
+        WHERE id = ?
+      `,
+      [
         title,
         description,
-        required_skills,
-        experience_min,
-        experience_max,
-        role_level,
+        location || null,
+        employmentType || null,
+        experienceLevel || null,
+        JSON.stringify(skills || []),
+        externalUrl || null,
+        existingJobId
+      ]
+    );
+
+    return {
+      jobId: existingJobId,
+      action: "updated"
+    };
+  }
+
+  const [result] = await pool.execute(
+    `
+      INSERT INTO jobs
+      (
+        employer_id,
+        company_id,
+        title,
+        description,
         location,
         employment_type,
-        salary_min,
-        salary_max,
+        experience_level,
+        skills,
         status,
         source,
         external_job_id,
         external_url,
         is_external
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    [
-      job.companyId ?? null,
-      job.employerId ?? null,
-      job.title,
-      job.description || "",
-      JSON.stringify(
-        job.requiredSkills || []
-      ),
-      job.experienceMin ?? 0,
-      job.experienceMax ?? null,
-      job.roleLevel ||
-        "not specified",
-      job.location || null,
-      job.employmentType ||
-        "not specified",
-      job.salaryMin ?? null,
-      job.salaryMax ?? null,
-      "open",
-      job.source,
-      String(
-        job.externalJobId
-      ),
-      job.externalUrl || null,
-      true
-    ]
-  );
-
-  return findJobById(
-    result.insertId
-  );
-}
-
-export async function updateExternalJob(
-  source,
-  externalJobId,
-  job
-) {
-  const [result] = await pool.execute(
-    `
-      UPDATE jobs
-      SET
-        title = ?,
-        description = ?,
-        required_skills = ?,
-        experience_min = ?,
-        experience_max = ?,
-        role_level = ?,
-        location = ?,
-        employment_type = ?,
-        salary_min = ?,
-        salary_max = ?,
-        external_url = ?,
-        status = 'open',
-        updated_at = CURRENT_TIMESTAMP
-      WHERE source = ?
-        AND external_job_id = ?
-        AND is_external = TRUE
-    `,
-    [
-      job.title,
-      job.description || "",
-      JSON.stringify(
-        job.requiredSkills || []
-      ),
-      job.experienceMin ?? 0,
-      job.experienceMax ?? null,
-      job.roleLevel ||
-        "not specified",
-      job.location || null,
-      job.employmentType ||
-        "not specified",
-      job.salaryMin ?? null,
-      job.salaryMax ?? null,
-      job.externalUrl || null,
-      source,
-      String(
-        externalJobId
+      VALUES
+      (
+        NULL,
+        NULL,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        'open',
+        ?,
+        ?,
+        ?,
+        TRUE
       )
+    `,
+    [
+      title,
+      description,
+      location || null,
+      employmentType || null,
+      experienceLevel || null,
+      JSON.stringify(skills || []),
+      source,
+      externalJobId,
+      externalUrl || null
     ]
   );
-
-  return result.affectedRows > 0;
-}
-
-export async function upsertExternalJob(
-  job
-) {
-  if (
-    !job.source ||
-    !job.externalJobId
-  ) {
-    throw new Error(
-      "External job source and external job ID are required"
-    );
-  }
-
-  const externalJobId =
-    String(
-      job.externalJobId
-    );
-
-  const existingJob =
-    await findExternalJob(
-      job.source,
-      externalJobId
-    );
-
-  if (existingJob) {
-    await updateExternalJob(
-      job.source,
-      externalJobId,
-      job
-    );
-
-    return {
-      action: "updated",
-      jobId: existingJob.id
-    };
-  }
-
-  const createdJob =
-    await createExternalJob({
-      ...job,
-      externalJobId
-    });
 
   return {
-    action: "created",
-    jobId: createdJob.id
+    jobId: result.insertId,
+    action: "created"
   };
 }
 
 function formatJob(row) {
-  let requiredSkills = [];
+  let skills = [];
 
-  if (
-    Array.isArray(
-      row.required_skills
-    )
-  ) {
-    requiredSkills =
-      row.required_skills;
-  } else if (
-    typeof row.required_skills ===
-    "string"
-  ) {
+  if (Array.isArray(row.skills)) {
+    skills = row.skills;
+  } else if (typeof row.skills === "string") {
     try {
-      requiredSkills =
-        JSON.parse(
-          row.required_skills
-        );
+      skills = JSON.parse(row.skills);
     } catch {
-      requiredSkills = [];
+      skills = [];
     }
   }
 
   return {
     id: row.id,
-
-    companyId:
-      row.company_id,
-
-    employerId:
-      row.employer_id,
-
-    title:
-      row.title,
-
-    description:
-      row.description,
-
-    requiredSkills,
-
-    experienceMin:
-      Number(
-        row.experience_min || 0
-      ),
-
-    experienceMax:
-      row.experience_max === null
-        ? null
-        : Number(
-            row.experience_max
-          ),
-
-    roleLevel:
-      row.role_level,
-
-    location:
-      row.location,
-
-    employmentType:
-      row.employment_type,
-
-    salaryMin:
-      row.salary_min === null
-        ? null
-        : Number(
-            row.salary_min
-          ),
-
-    salaryMax:
-      row.salary_max === null
-        ? null
-        : Number(
-            row.salary_max
-          ),
-
-    status:
-      row.status,
-
-    source:
-      row.source ||
-      "hiresense",
-
-    externalJobId:
-      row.external_job_id ||
-      null,
-
-    externalUrl:
-      row.external_url ||
-      null,
-
-    isExternal:
-      Boolean(
-        row.is_external
-      ),
-
-    createdAt:
-      row.created_at,
-
-    updatedAt:
-      row.updated_at
+    companyId: row.company_id,
+    companyName: row.company_name || null,
+    employerId: row.employer_id,
+    title: row.title,
+    description: row.description,
+    location: row.location,
+    employmentType: row.employment_type,
+    experienceLevel: row.experience_level,
+    skills,
+    status: row.status,
+    source: row.source,
+    externalJobId: row.external_job_id || null,
+    externalUrl: row.external_url || null,
+    isExternal: Boolean(row.is_external),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   };
 }

@@ -63,27 +63,6 @@ export async function generateOrGetJobMatch({
       job
     });
 
-  let interviewQuestions = [];
-
-  try {
-    const questionResult =
-      await generateInterviewQuestions({
-        resume,
-        job
-      });
-
-    if (
-      Array.isArray(
-        questionResult?.questions
-      )
-    ) {
-      interviewQuestions =
-        questionResult.questions;
-    }
-  } catch {
-    interviewQuestions = [];
-  }
-
   const result =
     await MatchResult.findOneAndUpdate(
       {
@@ -91,19 +70,23 @@ export async function generateOrGetJobMatch({
         jobId
       },
       {
-        candidateId,
-        jobId,
-        matchScore: match.matchScore,
-        reasoning: match.reasoning,
-        strengths:
-          Array.isArray(match.strengths)
-            ? match.strengths
-            : [],
-        gaps:
-          Array.isArray(match.gaps)
-            ? match.gaps
-            : [],
-        interviewQuestions
+        $setOnInsert: {
+          candidateId,
+          jobId,
+          matchScore:
+            Number(match.matchScore ?? 0),
+          reasoning:
+            match.reasoning || "",
+          strengths:
+            Array.isArray(match.strengths)
+              ? match.strengths
+              : [],
+          gaps:
+            Array.isArray(match.gaps)
+              ? match.gaps
+              : [],
+          interviewQuestions: []
+        }
       },
       {
         new: true,
@@ -130,7 +113,7 @@ export async function generateInterviewQuestionsForJob({
   candidateId,
   jobId
 }) {
-  const existingMatch =
+  let existingMatch =
     await MatchResult.findOne({
       candidateId,
       jobId
@@ -178,6 +161,14 @@ export async function generateInterviewQuestionsForJob({
     throw error;
   }
 
+  if (!existingMatch) {
+    existingMatch =
+      await generateOrGetJobMatch({
+        candidateId,
+        jobId
+      });
+  }
+
   const questionResult =
     await generateInterviewQuestions({
       resume,
@@ -191,19 +182,24 @@ export async function generateInterviewQuestionsForJob({
       ? questionResult.questions
       : [];
 
-  if (existingMatch) {
-    existingMatch.interviewQuestions =
-      questions;
+  if (questions.length !== 5) {
+    const error = new Error(
+      "Failed to generate exactly 5 interview questions"
+    );
 
-    await existingMatch.save();
+    error.statusCode = 500;
+    error.errorCode =
+      "INVALID_INTERVIEW_QUESTIONS";
 
-    return existingMatch;
+    throw error;
   }
 
-  return generateOrGetJobMatch({
-    candidateId,
-    jobId
-  });
+  existingMatch.interviewQuestions =
+    questions;
+
+  await existingMatch.save();
+
+  return existingMatch;
 }
 
 export default {

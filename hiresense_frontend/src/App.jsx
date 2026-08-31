@@ -165,21 +165,6 @@ function App() {
               Home
             </NavLink>
 
-            <NavLink
-              to="/jobs"
-              className={({ isActive }) =>
-                isActive
-                  ? isDark
-                    ? 'font-medium text-white'
-                    : 'font-medium text-slate-900'
-                  : isDark
-                    ? 'hover:text-white'
-                    : 'hover:text-slate-900'
-              }
-            >
-              Jobs
-            </NavLink>
-
             {user ? (
               user.role === 'candidate' ? (
                 <>
@@ -225,7 +210,7 @@ function App() {
                           : 'hover:text-slate-900'
                     }
                   >
-                    Find Jobs
+                    Jobs
                   </NavLink>
 
                   <NavLink
@@ -348,7 +333,7 @@ function App() {
               {[
                 ['/candidate/dashboard', 'Dashboard'],
                 ['/candidate/resume', 'Resume'],
-                ['/candidate/jobs', 'Find Jobs'],
+                ['/candidate/jobs', 'Jobs'],
                 ['/candidate/applications', 'Applications'],
                 ['/candidate/profile', 'Profile']
               ].map(([path, label]) => (
@@ -356,14 +341,13 @@ function App() {
                   key={path}
                   to={path}
                   className={({ isActive }) =>
-                    `rounded-full border px-2.5 py-1.5 text-xs ${
-                      isActive
-                        ? isDark
-                          ? 'border-sky-500/40 bg-sky-500/10 text-sky-300'
-                          : 'border-sky-200 bg-sky-50 text-sky-700'
-                        : isDark
-                          ? 'border-slate-700 bg-slate-900 text-slate-200'
-                          : 'border-slate-200 bg-white text-slate-700'
+                    `rounded-full border px-2.5 py-1.5 text-xs ${isActive
+                      ? isDark
+                        ? 'border-sky-500/40 bg-sky-500/10 text-sky-300'
+                        : 'border-sky-200 bg-sky-50 text-sky-700'
+                      : isDark
+                        ? 'border-slate-700 bg-slate-900 text-slate-200'
+                        : 'border-slate-200 bg-white text-slate-700'
                     }`
                   }
                 >
@@ -737,9 +721,8 @@ function HomePage({ isDark }) {
             className={`rounded-[24px] border p-5 shadow-inner ${soft}`}
           >
             <div
-              className={`flex items-center justify-between border-b pb-4 ${
-                isDark ? 'border-slate-700' : 'border-slate-200'
-              }`}
+              className={`flex items-center justify-between border-b pb-4 ${isDark ? 'border-slate-700' : 'border-slate-200'
+                }`}
             >
               <div>
                 <p className={`text-sm ${textSoft}`}>
@@ -1262,11 +1245,10 @@ function RoleSelector({
 
   return (
     <div
-      className={`space-y-2 text-sm ${
-        isDark
-          ? 'text-slate-300'
-          : 'text-slate-700'
-      }`}
+      className={`space-y-2 text-sm ${isDark
+        ? 'text-slate-300'
+        : 'text-slate-700'
+        }`}
     >
       <span>Role</span>
 
@@ -1274,13 +1256,12 @@ function RoleSelector({
         <button
           type="button"
           onClick={() => onChange('candidate')}
-          className={`${buttonClass} ${
-            value === 'candidate'
-              ? isDark
-                ? 'border-sky-400 bg-sky-500/10 text-sky-300'
-                : 'border-sky-300 bg-sky-50 text-sky-700'
-              : ''
-          }`}
+          className={`${buttonClass} ${value === 'candidate'
+            ? isDark
+              ? 'border-sky-400 bg-sky-500/10 text-sky-300'
+              : 'border-sky-300 bg-sky-50 text-sky-700'
+            : ''
+            }`}
         >
           Candidate
         </button>
@@ -1288,13 +1269,12 @@ function RoleSelector({
         <button
           type="button"
           onClick={() => onChange('employer')}
-          className={`${buttonClass} ${
-            value === 'employer'
-              ? isDark
-                ? 'border-sky-400 bg-sky-500/10 text-sky-300'
-                : 'border-sky-300 bg-sky-50 text-sky-700'
-              : ''
-          }`}
+          className={`${buttonClass} ${value === 'employer'
+            ? isDark
+              ? 'border-sky-400 bg-sky-500/10 text-sky-300'
+              : 'border-sky-300 bg-sky-50 text-sky-700'
+            : ''
+            }`}
         >
           Employer
         </button>
@@ -1461,10 +1441,10 @@ function DashboardPage({ isDark }) {
 
             return match
               ? {
-                  ...application,
-                  matchScore: match.matchScore,
-                  match
-                }
+                ...application,
+                matchScore: match.matchScore,
+                match
+              }
               : application;
           });
 
@@ -1544,11 +1524,11 @@ function DashboardPage({ isDark }) {
 
   const averageMatch = scoreValues.length
     ? Math.round(
-        scoreValues.reduce(
-          (sum, value) => sum + value,
-          0
-        ) / scoreValues.length
-      )
+      scoreValues.reduce(
+        (sum, value) => sum + value,
+        0
+      ) / scoreValues.length
+    )
     : null;
 
   const resumeScore = Number(
@@ -1644,11 +1624,10 @@ function DashboardPage({ isDark }) {
 
       {error ? (
         <div
-          className={`rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm ${
-            isDark
-              ? 'text-red-200'
-              : 'text-red-700'
-          }`}
+          className={`rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm ${isDark
+            ? 'text-red-200'
+            : 'text-red-700'
+            }`}
         >
           {error}
         </div>
@@ -1799,11 +1778,10 @@ function DashboardPage({ isDark }) {
                     (item) => (
                       <span
                         key={item}
-                        className={`rounded-full border px-2.5 py-1 text-xs ${
-                          isDark
-                            ? 'border-sky-500/30 bg-sky-500/10 text-sky-300'
-                            : 'border-sky-200 bg-sky-50 text-sky-700'
-                        }`}
+                        className={`rounded-full border px-2.5 py-1 text-xs ${isDark
+                          ? 'border-sky-500/30 bg-sky-500/10 text-sky-300'
+                          : 'border-sky-200 bg-sky-50 text-sky-700'
+                          }`}
                       >
                         {item}
                       </span>
@@ -1832,11 +1810,10 @@ function DashboardPage({ isDark }) {
                     (item) => (
                       <span
                         key={item}
-                        className={`rounded-full border px-2.5 py-1 text-xs ${
-                          isDark
-                            ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
-                            : 'border-amber-200 bg-amber-50 text-amber-700'
-                        }`}
+                        className={`rounded-full border px-2.5 py-1 text-xs ${isDark
+                          ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                          : 'border-amber-200 bg-amber-50 text-amber-700'
+                          }`}
                       >
                         {item}
                       </span>
@@ -1976,21 +1953,20 @@ function DashboardPage({ isDark }) {
 
                       <div className="flex items-center gap-3">
                         <span
-                          className={`rounded-full border px-2.5 py-1 text-xs ${
-                            isDark
-                              ? 'border-slate-700 bg-slate-900 text-slate-200'
-                              : 'border-slate-200 bg-white text-slate-700'
-                          }`}
+                          className={`rounded-full border px-2.5 py-1 text-xs ${isDark
+                            ? 'border-slate-700 bg-slate-900 text-slate-200'
+                            : 'border-slate-200 bg-white text-slate-700'
+                            }`}
                         >
                           {String(
                             application.status ||
-                              'Applied'
+                            'Applied'
                           )
                             .charAt(0)
                             .toUpperCase() +
                             String(
                               application.status ||
-                                'Applied'
+                              'Applied'
                             ).slice(1)}
                         </span>
 
@@ -1999,7 +1975,7 @@ function DashboardPage({ isDark }) {
                         >
                           {application.matchScore !==
                             null &&
-                          application.matchScore !==
+                            application.matchScore !==
                             undefined
                             ? `${application.matchScore}%`
                             : 'Match N/A'}
@@ -2084,11 +2060,10 @@ function DashboardPage({ isDark }) {
                     <div className="mt-3 flex flex-wrap gap-2">
                       {job.roleLevel ? (
                         <span
-                          className={`rounded-full border px-2 py-1 text-[11px] ${
-                            isDark
-                              ? 'border-slate-700 bg-slate-900 text-slate-200'
-                              : 'border-slate-200 bg-white text-slate-700'
-                          }`}
+                          className={`rounded-full border px-2 py-1 text-[11px] ${isDark
+                            ? 'border-slate-700 bg-slate-900 text-slate-200'
+                            : 'border-slate-200 bg-white text-slate-700'
+                            }`}
                         >
                           {job.roleLevel}
                         </span>
@@ -2096,11 +2071,10 @@ function DashboardPage({ isDark }) {
 
                       {job.employmentType ? (
                         <span
-                          className={`rounded-full border px-2 py-1 text-[11px] ${
-                            isDark
-                              ? 'border-slate-700 bg-slate-900 text-slate-200'
-                              : 'border-slate-200 bg-white text-slate-700'
-                          }`}
+                          className={`rounded-full border px-2 py-1 text-[11px] ${isDark
+                            ? 'border-slate-700 bg-slate-900 text-slate-200'
+                            : 'border-slate-200 bg-white text-slate-700'
+                            }`}
                         >
                           {job.employmentType}
                         </span>

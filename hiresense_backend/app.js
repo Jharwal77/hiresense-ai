@@ -44,17 +44,52 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     success: false,
-    message: "Too many authentication attempts, please try again later",
+    message:
+      "Too many authentication attempts, please try again later",
     errorCode: "AUTH_RATE_LIMIT_EXCEEDED"
   }
 });
 
 app.use(helmet());
 
+const allowedOrigins = env.clientUrl
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: env.clientUrl,
-    credentials: true
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      const error = new Error(
+        "Origin not allowed by CORS"
+      );
+
+      error.statusCode = 403;
+      error.errorCode = "CORS_ORIGIN_FORBIDDEN";
+
+      return callback(error);
+    },
+    credentials: true,
+    methods: [
+      "GET",
+      "POST",
+      "PATCH",
+      "PUT",
+      "DELETE",
+      "OPTIONS"
+    ],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization"
+    ]
   })
 );
 
@@ -92,7 +127,11 @@ app.use(
   healthRoutes
 );
 
-app.use("/api/auth", authLimiter, authRoutes);
+app.use(
+  "/api/auth",
+  authLimiter,
+  authRoutes
+);
 
 app.use(
   "/api/candidates",

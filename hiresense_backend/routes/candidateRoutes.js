@@ -23,6 +23,12 @@ import {
   retryResumeAIController
 } from "../controllers/resumeController.js";
 
+import {
+  validateCandidateProfile
+} from "../validators/candidateProfileValidator.js";
+
+
+
 const router = express.Router();
 
 
@@ -63,6 +69,7 @@ router.patch(
   "/me/profile",
   authenticate,
   requireRole("candidate"),
+  validateCandidateProfile,
   updateMyProfile
 );
 
